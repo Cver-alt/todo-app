@@ -275,18 +275,19 @@ export default function Home() {
 
   const renderTodoItem = (todo: Todo) => {
     const isOwn = !todo.user_id || todo.user_id === user?.id
+    const canEdit = isOwn || sharedSubjects.some((ss) => ss.sujet === todo.sujet)
     return (
       <li key={todo.id} className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
         <input
           type="checkbox"
           checked={todo.is_complete}
-          onChange={() => isOwn && toggleTodo(todo)}
-          disabled={!isOwn}
-          className={`w-4 h-4 mt-0.5 accent-blue-500 flex-shrink-0 ${isOwn ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'}`}
+          onChange={() => canEdit && toggleTodo(todo)}
+          disabled={!canEdit}
+          className={`w-4 h-4 mt-0.5 accent-blue-500 flex-shrink-0 ${canEdit ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'}`}
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            {isOwn && editingId === todo.id ? (
+            {canEdit && editingId === todo.id ? (
               <input
                 type="text" value={editingTitle} autoFocus
                 onChange={(e) => setEditingTitle(e.target.value)}
@@ -296,8 +297,8 @@ export default function Home() {
               />
             ) : (
               <span
-                onClick={() => isOwn && (setEditingId(todo.id), setEditingTitle(todo.title))}
-                className={`text-sm transition-colors ${isOwn ? 'cursor-pointer hover:text-blue-500' : 'cursor-default'} ${todo.is_complete ? 'line-through text-gray-400' : 'text-gray-700'}`}
+                onClick={() => canEdit && (setEditingId(todo.id), setEditingTitle(todo.title))}
+                className={`text-sm transition-colors ${canEdit ? 'cursor-pointer hover:text-blue-500' : 'cursor-default'} ${todo.is_complete ? 'line-through text-gray-400' : 'text-gray-700'}`}
               >
                 {todo.title}
               </span>
@@ -311,9 +312,11 @@ export default function Home() {
               </span>
             )}
           </div>
-          {isOwn ? (
+          {canEdit ? (
             <>
-              <SujetSelect value={todo.sujet ?? ''} sujets={sujets} onSelect={(v) => saveSujet(todo, v)} onNewSujet={addSujet} className={`mt-1 ${sc}`} />
+              {isOwn && (
+                <SujetSelect value={todo.sujet ?? ''} sujets={sujets} onSelect={(v) => saveSujet(todo, v)} onNewSujet={addSujet} className={`mt-1 ${sc}`} />
+              )}
               <select value={todo.priorite ?? 'moyenne'} onChange={(e) => savePriorite(todo, e.target.value)} className={`mt-1 ${sc}`}>
                 <option value="élevée">Élevée</option>
                 <option value="moyenne">Moyenne</option>
@@ -415,7 +418,7 @@ export default function Home() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-800">Ma Todo List</h1>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-400 hidden sm:block">{user?.email}</span>
+            <span className="text-xs text-gray-400">{user?.email}</span>
             <button
               onClick={signOut}
               className="text-xs text-gray-400 hover:text-red-400 border border-gray-200 hover:border-red-200 px-3 py-1.5 rounded-lg transition-colors"
