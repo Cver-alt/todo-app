@@ -127,6 +127,7 @@ export default function Home() {
   const [sharedSubjects, setSharedSubjects] = useState<SharedSubject[]>([])
   const [openShareSujet, setOpenShareSujet] = useState<string | null>(null)
   const [shareEmail, setShareEmail]   = useState('')
+  const [collapsedSujets, setCollapsedSujets] = useState<Set<string>>(new Set())
 
   // ─── Auth ──────────────────────────────────────────────────────────────────
 
@@ -273,7 +274,7 @@ export default function Home() {
   const sc = 'text-xs text-gray-400 border-b border-transparent hover:border-gray-200 focus:border-blue-300 focus:outline-none bg-transparent py-0.5 transition-colors'
 
   const renderTodoItem = (todo: Todo) => {
-    const isOwn = todo.user_id === user?.id
+    const isOwn = !todo.user_id || todo.user_id === user?.id
     return (
       <li key={todo.id} className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
         <input
@@ -334,12 +335,29 @@ export default function Home() {
     )
   }
 
+  function toggleCollapse(sujet: string) {
+    setCollapsedSujets((prev) => {
+      const next = new Set(prev)
+      next.has(sujet) ? next.delete(sujet) : next.add(sujet)
+      return next
+    })
+  }
+
   const renderGroups = (groups: [string, Todo[]][], showShare: boolean) => (
     <div className="space-y-6">
-      {groups.map(([sujet, items]) => (
+      {groups.map(([sujet, items]) => {
+        const isCollapsed = collapsedSujets.has(sujet)
+        return (
         <div key={sujet}>
           <div className="flex items-center justify-between mb-2 border-b border-gray-100 pb-1">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">{sujet}</h2>
+            <button
+              onClick={() => toggleCollapse(sujet)}
+              className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <span className={`inline-block transition-transform duration-200 ${isCollapsed ? '-rotate-90' : 'rotate-0'}`}>▾</span>
+              {sujet}
+              <span className="font-normal normal-case tracking-normal text-gray-300">({items.length})</span>
+            </button>
             {showShare && sujet !== 'Sans sujet' && (
               <button
                 onClick={() => { setOpenShareSujet(openShareSujet === sujet ? null : sujet); setShareEmail('') }}
@@ -380,9 +398,10 @@ export default function Home() {
               </div>
             </div>
           )}
-          <ul className="space-y-2">{items.map(renderTodoItem)}</ul>
+          {!isCollapsed && <ul className="space-y-2">{items.map(renderTodoItem)}</ul>}
         </div>
-      ))}
+        )
+      })}
     </div>
   )
 
