@@ -116,6 +116,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
+  const [archivesOpen, setArchivesOpen] = useState(false)
 
   // Load sujets from localStorage on mount
   useEffect(() => {
@@ -244,7 +245,10 @@ export default function Home() {
     else setTodos((prev) => prev.map((t) => (t.id === data.id ? data : t)))
   }
 
-  const grouped = groupBySujet(todos)
+  const active   = todos.filter((t) => !t.is_complete)
+  const archived = todos.filter((t) =>  t.is_complete)
+  const grouped         = groupBySujet(active)
+  const groupedArchived = groupBySujet(archived)
   const selectClass = 'text-xs text-gray-400 border-b border-transparent hover:border-gray-200 focus:border-blue-300 focus:outline-none bg-transparent py-0.5 transition-colors'
 
   return (
@@ -288,107 +292,104 @@ export default function Home() {
           />
         </div>
 
-        {/* Todo list grouped by sujet */}
-        {loading ? (
-          <p className="text-sm text-gray-400 text-center">Chargement...</p>
-        ) : todos.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center">Aucune tâche pour l'instant.</p>
-        ) : (
-          <div className="space-y-6">
-            {grouped.map(([sujet, items]) => (
-              <div key={sujet}>
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2 border-b border-gray-100 pb-1">
-                  {sujet}
-                </h2>
-                <ul className="space-y-2">
-                  {items.map((todo) => (
-                    <li
-                      key={todo.id}
-                      className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
+        {/* helper : renders a grouped todo list */}
+        {(() => {
+          const renderTodoItem = (todo: Todo) => (
+            <li
+              key={todo.id}
+              className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
+            >
+              <input
+                type="checkbox"
+                checked={todo.is_complete}
+                onChange={() => toggleTodo(todo)}
+                className="w-4 h-4 mt-0.5 accent-blue-500 cursor-pointer flex-shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  {editingId === todo.id ? (
+                    <input
+                      type="text"
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onBlur={() => saveTitle(todo)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') saveTitle(todo)
+                        if (e.key === 'Escape') setEditingId(null)
+                      }}
+                      autoFocus
+                      className="flex-1 text-sm text-gray-700 border-b border-blue-300 focus:outline-none bg-transparent py-0.5"
+                    />
+                  ) : (
+                    <span
+                      onClick={() => { setEditingId(todo.id); setEditingTitle(todo.title) }}
+                      className={`block text-sm cursor-pointer hover:text-blue-500 transition-colors ${
+                        todo.is_complete ? 'line-through text-gray-400' : 'text-gray-700'
+                      }`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={todo.is_complete}
-                        onChange={() => toggleTodo(todo)}
-                        className="w-4 h-4 mt-0.5 accent-blue-500 cursor-pointer flex-shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          {editingId === todo.id ? (
-                            <input
-                              type="text"
-                              value={editingTitle}
-                              onChange={(e) => setEditingTitle(e.target.value)}
-                              onBlur={() => saveTitle(todo)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') saveTitle(todo)
-                                if (e.key === 'Escape') setEditingId(null)
-                              }}
-                              autoFocus
-                              className="flex-1 text-sm text-gray-700 border-b border-blue-300 focus:outline-none bg-transparent py-0.5"
-                            />
-                          ) : (
-                            <span
-                              onClick={() => { setEditingId(todo.id); setEditingTitle(todo.title) }}
-                              className={`block text-sm cursor-pointer hover:text-blue-500 transition-colors ${
-                                todo.is_complete ? 'line-through text-gray-400' : 'text-gray-700'
-                              }`}
-                            >
-                              {todo.title}
-                            </span>
-                          )}
-                          <span
-                            className={`text-xs font-medium px-1.5 py-0.5 rounded capitalize flex-shrink-0 ${
-                              PRIORITE_STYLES[todo.priorite ?? 'moyenne']
-                            }`}
-                          >
-                            {todo.priorite ?? 'moyenne'}
-                          </span>
-                        </div>
-                        <SujetSelect
-                          value={todo.sujet ?? ''}
-                          sujets={sujets}
-                          onSelect={(v) => saveSujet(todo, v)}
-                          onNewSujet={addSujet}
-                          className={`mt-1 ${selectClass}`}
-                        />
-                        <select
-                          value={todo.priorite ?? 'moyenne'}
-                          onChange={(e) => savePriorite(todo, e.target.value)}
-                          className={`mt-1 ${selectClass}`}
-                        >
-                          <option value="élevée">Élevée</option>
-                          <option value="moyenne">Moyenne</option>
-                          <option value="basse">Basse</option>
-                        </select>
-                        <input
-                          type="text"
-                          defaultValue={todo.remarque ?? ''}
-                          onBlur={(e) => saveRemarque(todo, e.target.value)}
-                          placeholder="Ajouter une remarque..."
-                          className={`mt-1 w-full ${selectClass} text-gray-500 placeholder-gray-300`}
-                        />
-                        <input
-                          type="date"
-                          defaultValue={todo.due_date ?? ''}
-                          onBlur={(e) => saveDueDate(todo, e.target.value)}
-                          className={`mt-1 ${selectClass}`}
-                        />
-                      </div>
-                      <button
-                        onClick={() => deleteTodo(todo.id)}
-                        className="text-gray-300 hover:text-red-400 transition-colors text-lg leading-none flex-shrink-0"
-                        aria-label="Supprimer"
-                      >
-                        &times;
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                      {todo.title}
+                    </span>
+                  )}
+                  <span className={`text-xs font-medium px-1.5 py-0.5 rounded capitalize flex-shrink-0 ${PRIORITE_STYLES[todo.priorite ?? 'moyenne']}`}>
+                    {todo.priorite ?? 'moyenne'}
+                  </span>
+                </div>
+                <SujetSelect value={todo.sujet ?? ''} sujets={sujets} onSelect={(v) => saveSujet(todo, v)} onNewSujet={addSujet} className={`mt-1 ${selectClass}`} />
+                <select value={todo.priorite ?? 'moyenne'} onChange={(e) => savePriorite(todo, e.target.value)} className={`mt-1 ${selectClass}`}>
+                  <option value="élevée">Élevée</option>
+                  <option value="moyenne">Moyenne</option>
+                  <option value="basse">Basse</option>
+                </select>
+                <input type="text" defaultValue={todo.remarque ?? ''} onBlur={(e) => saveRemarque(todo, e.target.value)} placeholder="Ajouter une remarque..." className={`mt-1 w-full ${selectClass} text-gray-500 placeholder-gray-300`} />
+                <input type="date" defaultValue={todo.due_date ?? ''} onBlur={(e) => saveDueDate(todo, e.target.value)} className={`mt-1 ${selectClass}`} />
               </div>
-            ))}
-          </div>
-        )}
+              <button onClick={() => deleteTodo(todo.id)} className="text-gray-300 hover:text-red-400 transition-colors text-lg leading-none flex-shrink-0" aria-label="Supprimer">
+                &times;
+              </button>
+            </li>
+          )
+
+          const renderGroups = (groups: [string, Todo[]][]) => (
+            <div className="space-y-6">
+              {groups.map(([sujet, items]) => (
+                <div key={sujet}>
+                  <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2 border-b border-gray-100 pb-1">{sujet}</h2>
+                  <ul className="space-y-2">{items.map(renderTodoItem)}</ul>
+                </div>
+              ))}
+            </div>
+          )
+
+          return (
+            <>
+              {/* Active todos */}
+              {loading ? (
+                <p className="text-sm text-gray-400 text-center">Chargement...</p>
+              ) : active.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center">Aucune tâche pour l'instant.</p>
+              ) : renderGroups(grouped)}
+
+              {/* Archives */}
+              {!loading && archived.length > 0 && (
+                <div className="mt-8">
+                  <button
+                    onClick={() => setArchivesOpen((o) => !o)}
+                    className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-gray-600 transition-colors w-full border-t border-gray-100 pt-4"
+                  >
+                    <span className={`transition-transform ${archivesOpen ? 'rotate-90' : ''}`}>▶</span>
+                    Archives
+                    <span className="ml-auto text-xs font-normal text-gray-300">{archived.length} tâche{archived.length > 1 ? 's' : ''}</span>
+                  </button>
+                  {archivesOpen && (
+                    <div className="mt-4 opacity-70">
+                      {renderGroups(groupedArchived)}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )
+        })()}
       </div>
     </main>
   )
